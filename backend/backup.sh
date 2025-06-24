@@ -1,14 +1,13 @@
 #!/bin/bash
 
-# A script to back up a log file to a gzipped tar archive in the root directory.
+# A script to back up a log file to a gzipped tar archive.
+# The archive will be saved in the same directory where this script is located.
 # Usage: ./backup_script.sh /path/to/your/logfile.log
-# Note: This script needs to be run with root privileges (e.g., using sudo)
-# to create a file in the root directory (/).
 
 # --- Configuration ---
-BACKUP_DIR="/"
-ARCHIVE_NAME="backup.tar.gz"
-BACKUP_PATH="${BACKUP_DIR}${ARCHIVE_NAME}"
+# Get the absolute path of the directory where the script is located. This works even
+# if the script is called from a different directory or through a symbolic link.
+SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 
 # --- Argument Validation ---
 
@@ -31,20 +30,25 @@ fi
 
 echo "Starting backup of '$LOG_FILE'..."
 
+# Get just the filename from the input path (e.g., "syslog.log")
+FILE_BASENAME=$(basename "$LOG_FILE")
+# Get the directory containing the log file.
+FILE_DIR=$(dirname "$LOG_FILE")
+
+# Set a fixed archive name as requested.
+ARCHIVE_NAME="backup.tar.gz"
+BACKUP_PATH="${SCRIPT_DIR}/${ARCHIVE_NAME}"
+
+echo "Backup file will be saved as: ${BACKUP_PATH}"
+echo "Warning: This will overwrite any existing file named 'backup.tar.gz' in the script's directory."
+
 # Create the compressed archive.
 # -c: Create a new archive.
 # -z: Compress the archive with gzip.
 # -v: Verbosely list files processed.
 # -f: Specifies the archive filename.
-# The --absolute-names option is used to prevent tar from stripping leading slashes,
-# but a better practice is to use -C to change directory to store the relative path.
-# However, for this specific request of backing up a single file to a specific location,
-# this is straightforward. We will use -C to change the directory to the file's
-# location to avoid storing the absolute path in the tarball.
-
-FILE_BASENAME=$(basename "$LOG_FILE")
-FILE_DIR=$(dirname "$LOG_FILE")
-
+# -C: Change to the specified directory before performing any operations.
+#     This ensures the archive contains relative paths, not absolute ones.
 tar -czvf "$BACKUP_PATH" -C "$FILE_DIR" "$FILE_BASENAME"
 
 # --- Verification and Cleanup ---
